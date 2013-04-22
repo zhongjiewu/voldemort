@@ -24,6 +24,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.log4j.Logger;
+
 import voldemort.VoldemortException;
 import voldemort.annotations.concurrency.NotThreadsafe;
 import voldemort.store.AbstractStorageEngine;
@@ -43,6 +45,7 @@ import voldemort.versioning.Versioned;
  */
 public class InMemoryStorageEngine<K, V, T> extends AbstractStorageEngine<K, V, T> {
 
+    private static final Logger logger = Logger.getLogger(InMemoryStorageEngine.class);
     private final ConcurrentMap<K, List<Versioned<V>>> map;
 
     public InMemoryStorageEngine(String name) {
@@ -61,6 +64,10 @@ public class InMemoryStorageEngine<K, V, T> extends AbstractStorageEngine<K, V, 
 
     public boolean delete(K key) {
         return delete(key, null);
+    }
+
+    public ConcurrentMap<K, List<Versioned<V>>> getInnerMap() {
+        return map;
     }
 
     @Override
@@ -122,6 +129,10 @@ public class InMemoryStorageEngine<K, V, T> extends AbstractStorageEngine<K, V, 
     @Override
     public void put(K key, Versioned<V> value, T transforms) throws VoldemortException {
         StoreUtils.assertValidKey(key);
+        if(logger.isTraceEnabled() && this.getClass() == InMemoryStorageEngine.class) {
+            logger.trace("PUT key " + key + " to InMemoryStorageEngine. Size before put: "
+                         + map.size());
+        }
 
         Version version = value.getVersion();
         boolean success = false;
