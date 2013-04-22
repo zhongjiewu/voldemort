@@ -999,6 +999,8 @@ public class StorageService extends AbstractService {
 
         logger.info("Closed client threadpool.");
 
+        storeFactory.close();
+
         if(this.failureDetector != null) {
             try {
                 this.failureDetector.destroy();
