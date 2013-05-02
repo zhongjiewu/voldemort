@@ -422,9 +422,13 @@ public class ConsistencyCheckTest {
         VectorClock vc1 = new VectorClock();
         VectorClock vc2 = new VectorClock();
         VectorClock vc3 = new VectorClock();
+        VectorClock vc4 = new VectorClock();
         vc1.incrementVersion(0, now); // [0:1]
         vc2.incrementVersion(1, now - 5000); // [1:1]
         vc3.incrementVersion(0, now - 89000000); // [0:1], over a day old
+        vc4.incrementVersion(0, now - 500000);
+        vc4.incrementVersion(0, now - 50000); // [0:2]
+        // now vc1 <> vc2, vc4 > vc1, vc4 <> vc2
 
         ArrayList<Pair<ByteArray, Versioned<byte[]>>> n0store = new ArrayList<Pair<ByteArray, Versioned<byte[]>>>();
         ArrayList<Pair<ByteArray, Versioned<byte[]>>> n1store = new ArrayList<Pair<ByteArray, Versioned<byte[]>>>();
@@ -446,7 +450,7 @@ public class ConsistencyCheckTest {
 
         RoutingStrategy router = new RoutingStrategyFactory().updateRoutingStrategy(storeDefinition,
                                                                                     cluster);
-        while(keysHashedToPar0.size() < 7) {
+        while(keysHashedToPar0.size() < 8) {
             // generate random key
             Map<ByteArray, byte[]> map = ServerTestUtils.createRandomKeyValuePairs(1);
             ByteArray key = map.keySet().iterator().next();
@@ -458,6 +462,7 @@ public class ConsistencyCheckTest {
                 continue;
             }
         }
+        ByteArray k7 = keysHashedToPar0.get(7);
         ByteArray k6 = keysHashedToPar0.get(6);
         ByteArray k5 = keysHashedToPar0.get(5);
         ByteArray k4 = keysHashedToPar0.get(4);
@@ -465,6 +470,26 @@ public class ConsistencyCheckTest {
         ByteArray k2 = keysHashedToPar0.get(2);
         ByteArray k1 = keysHashedToPar0.get(1);
         ByteArray k0 = keysHashedToPar0.get(0);
+
+        // insert K7 into node 0,1,2,3
+        Versioned<byte[]> v7Oldest = new Versioned<byte[]>(value, vc3);
+        n0store.add(Pair.create(k7, v7Oldest));
+        n1store.add(Pair.create(k7, v7Oldest));
+        n2store.add(Pair.create(k7, v7Oldest));
+        n3store.add(Pair.create(k7, v7Oldest));
+
+        // insert K7 into node 0,1,2 (newest)
+        Versioned<byte[]> v7 = new Versioned<byte[]>(value, vc2);
+        n0store.add(Pair.create(k7, v7));
+        n1store.add(Pair.create(k7, v7));
+        n2store.add(Pair.create(k7, v7));
+
+        // insert K7 into node 0,1,2,3
+        Versioned<byte[]> v7Older = new Versioned<byte[]>(value, vc4);
+        n0store.add(Pair.create(k7, v7Older));
+        n1store.add(Pair.create(k7, v7Older));
+        n2store.add(Pair.create(k7, v7Older));
+        n3store.add(Pair.create(k7, v7Older));
 
         // insert K6 into node 0,1,2
         Versioned<byte[]> v6 = new Versioned<byte[]>(value, vc1);
@@ -524,7 +549,7 @@ public class ConsistencyCheckTest {
         adminClient.streamingOps.updateEntries(3, STORE_NAME, n3store.iterator(), null);
 
         // should have FULL:2(K4,K5), LATEST_CONSISTENT:1(K3),
-        // INCONSISTENT:2(K6,K2), ignored(K1,K0)
+        // INCONSISTENT:2(K6,K2,K7), ignored(K1,K0)
         List<String> urls = new ArrayList<String>();
         urls.add(bootstrapUrl);
         ConsistencyCheck checker = new ConsistencyCheck(urls, STORE_NAME, 0, null);
@@ -532,7 +557,7 @@ public class ConsistencyCheckTest {
         checker.connect();
         reporter = checker.execute();
 
-        assertEquals(7 - 2, reporter.numTotalKeys);
+        assertEquals(8 - 2, reporter.numTotalKeys);
         assertEquals(3, reporter.numGoodKeys);
     }
 }

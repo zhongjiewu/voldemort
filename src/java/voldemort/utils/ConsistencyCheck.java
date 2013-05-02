@@ -289,6 +289,10 @@ public class ConsistencyCheck {
     }
 
     public void recordFetch(ClusterNode clusterNode, ByteArray key, Versioned<byte[]> versioned) {
+        if(logger.isTraceEnabled()) {
+            logger.trace("Recording refetch result from node [" + clusterNode + "] of key: "
+                         + key.toString() + " with version: " + versioned.getVersion());
+        }
         Version version;
         if(urls.size() == 1) {
             version = versioned.getVersion();
@@ -309,15 +313,22 @@ public class ConsistencyCheck {
         Map<Version, Set<ClusterNode>> versionNodeSetMap = keyVersionNodeSetMap.get(key);
 
         // check existing version
-        if(!versionNodeSetMap.containsKey(version) && versionNodeSetMap.size() != 0) {
-            // if this version is new, sweep old version
-            // if this version is old, ignore this version
-            Version oneExistingVersion = versionNodeSetMap.keySet().iterator().next();
-            if(version.compare(oneExistingVersion) == Occurred.AFTER) {
-                versionNodeSetMap.clear();
-            } else if(oneExistingVersion.compare(version) == Occurred.AFTER) {
-                return;
+        Set<Version> versionsToDelete = new HashSet<Version>();
+        if(!versionNodeSetMap.containsKey(version)) {
+            for(Version existingVersion: versionNodeSetMap.keySet()) {
+                // if this version is new, sweep old version
+                // if this version is old, ignore this version
+                if(version.compare(existingVersion) == Occurred.AFTER) {
+                    versionsToDelete.add(existingVersion);
+                } else if(existingVersion.compare(version) == Occurred.AFTER) {
+                    return;
+                }
             }
+        }
+
+        // delete versions that are obsolete
+        for(Version versionToDelete: versionsToDelete) {
+            versionNodeSetMap.remove(versionToDelete);
         }
 
         if(!versionNodeSetMap.containsKey(version)) {
