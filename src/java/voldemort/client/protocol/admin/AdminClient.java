@@ -783,7 +783,7 @@ public class AdminClient {
          * @param key metadata key to keep checking for current value
          * @param value metadata value should match for exit criteria.
          * @param maxWait Maximum time we'll keep checking a request until we
-         *        give up
+         *        give up. Pass in 0 or less to wait "forever".
          * @param timeUnit Unit in which maxWait is expressed.
          */
         public void waitForCompletion(int nodeId,
@@ -792,7 +792,10 @@ public class AdminClient {
                                       long maxWait,
                                       TimeUnit timeUnit) {
             long delay = INITIAL_DELAY;
-            long waitUntil = System.currentTimeMillis() + timeUnit.toMillis(maxWait);
+            long waitUntil = Long.MAX_VALUE;
+            if(maxWait > 0) {
+                waitUntil = System.currentTimeMillis() + timeUnit.toMillis(maxWait);
+            }
 
             while(System.currentTimeMillis() < waitUntil) {
                 String currentValue = metadataMgmtOps.getRemoteMetadata(nodeId, key).getValue();
@@ -828,7 +831,7 @@ public class AdminClient {
          * @param value metadata value should match for exit criteria.
          */
         public void waitForCompletion(int nodeId, String key, String value) {
-            waitForCompletion(nodeId, key, value, Long.MAX_VALUE, TimeUnit.SECONDS);
+            waitForCompletion(nodeId, key, value, 0, TimeUnit.SECONDS);
         }
 
     }
