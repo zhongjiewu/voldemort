@@ -43,101 +43,210 @@ public class ClusterTestUtils {
 
     public static long REBALANCE_CONTROLLER_TEST_PROXY_PAUSE_IN_SECONDS = 5;
 
+    private static StoreDefinitionBuilder defaultNonZonedStoreDefBuilder() {
+        return new StoreDefinitionBuilder().setRoutingPolicy(RoutingTier.CLIENT)
+                                           .setRoutingStrategyType(RoutingStrategyType.CONSISTENT_STRATEGY)
+                                           .setKeySerializer(new SerializerDefinition("string"))
+                                           .setValueSerializer(new SerializerDefinition("string"));
+    }
+
+    private static StoreDefinitionBuilder defaultZonedStoreDefBuilder() {
+        return new StoreDefinitionBuilder().setRoutingPolicy(RoutingTier.CLIENT)
+                                           .setRoutingStrategyType(RoutingStrategyType.ZONE_STRATEGY)
+                                           .setKeySerializer(new SerializerDefinition("string"))
+                                           .setValueSerializer(new SerializerDefinition("string"))
+                                           .setZoneCountReads(0)
+                                           .setZoneCountWrites(0);
+    }
+
+    /**
+     * Get a non-zoned 1/1/1 store with specified storageType
+     */
+    public static List<StoreDefinition> getNZ111StoreDefs(String storageType) {
+
+        List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
+        StoreDefinition storeDef111 = defaultNonZonedStoreDefBuilder().setName("NZ111")
+                                                                      .setType(storageType)
+                                                                      .setReplicationFactor(1)
+                                                                      .setRequiredReads(1)
+                                                                      .setRequiredWrites(1)
+                                                                      .build();
+        storeDefs.add(storeDef111);
+        return storeDefs;
+    }
+
+    /**
+     * Get a non-zoned 2/1/1 store with specified storageType
+     */
+    public static List<StoreDefinition> getNZ211StoreDefs(String storageType) {
+
+        List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
+        StoreDefinition storeDef211 = defaultNonZonedStoreDefBuilder().setName("NZ211")
+                                                                      .setType(storageType)
+                                                                      .setReplicationFactor(2)
+                                                                      .setRequiredReads(1)
+                                                                      .setRequiredWrites(1)
+                                                                      .build();
+        storeDefs.add(storeDef211);
+        return storeDefs;
+    }
+
+    /**
+     * Get a non-zoned 3/2/2 store with specified storageType
+     */
+    public static List<StoreDefinition> getNZ322StoreDefs(String storageType) {
+
+        List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
+        StoreDefinition storeDef322 = defaultNonZonedStoreDefBuilder().setName("NZ322")
+                                                                      .setType(storageType)
+                                                                      .setReplicationFactor(3)
+                                                                      .setRequiredReads(2)
+                                                                      .setRequiredWrites(2)
+                                                                      .build();
+        storeDefs.add(storeDef322);
+        return storeDefs;
+    }
+
+    /**
+     * Get a zoned 1/1/1 store in one zone with specified storageType
+     */
+    public static List<StoreDefinition> getZ111StoreDefs(String storageType) {
+
+        List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
+        HashMap<Integer, Integer> zoneRep111 = new HashMap<Integer, Integer>();
+        zoneRep111.put(0, 1);
+        StoreDefinition storeDef111 = defaultZonedStoreDefBuilder().setName("Z111")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(1)
+                                                                   .setZoneReplicationFactor(zoneRep111)
+                                                                   .setRequiredReads(1)
+                                                                   .setRequiredWrites(1)
+                                                                   .build();
+        storeDefs.add(storeDef111);
+        return storeDefs;
+    }
+
+    /**
+     * Get a zoned 2/1/1 store in one zone with specified storageType
+     */
+    public static List<StoreDefinition> getZ211StoreDefs(String storageType) {
+
+        List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
+        HashMap<Integer, Integer> zoneRep211 = new HashMap<Integer, Integer>();
+        zoneRep211.put(0, 2);
+        StoreDefinition storeDef211 = defaultZonedStoreDefBuilder().setName("Z211")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(2)
+                                                                   .setZoneReplicationFactor(zoneRep211)
+                                                                   .setRequiredReads(1)
+                                                                   .setRequiredWrites(1)
+                                                                   .build();
+        storeDefs.add(storeDef211);
+        return storeDefs;
+    }
+
+    /**
+     * Get a zoned 3/2/2 store in one zone with specified storageType
+     */
+    public static List<StoreDefinition> getZ322StoreDefs(String storageType) {
+
+        List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
+        HashMap<Integer, Integer> zoneRep322 = new HashMap<Integer, Integer>();
+        zoneRep322.put(0, 3);
+        StoreDefinition storeDef322 = defaultZonedStoreDefBuilder().setName("Z322")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(3)
+                                                                   .setZoneReplicationFactor(zoneRep322)
+                                                                   .setRequiredReads(2)
+                                                                   .setRequiredWrites(2)
+                                                                   .build();
+        storeDefs.add(storeDef322);
+        return storeDefs;
+    }
+
+    /**
+     * Get a zoned 1/1/1 store in zone 0 and 1 with specified storageType
+     */
     public static List<StoreDefinition> getZZ111StoreDefs(String storageType) {
 
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
         HashMap<Integer, Integer> zoneRep111 = new HashMap<Integer, Integer>();
         zoneRep111.put(0, 1);
         zoneRep111.put(1, 1);
-        StoreDefinition storeDef111 = new StoreDefinitionBuilder().setName("ZZ111")
-                                                                  .setType(storageType)
-                                                                  .setRoutingPolicy(RoutingTier.CLIENT)
-                                                                  .setRoutingStrategyType(RoutingStrategyType.ZONE_STRATEGY)
-                                                                  .setKeySerializer(new SerializerDefinition("string"))
-                                                                  .setValueSerializer(new SerializerDefinition("string"))
-                                                                  .setReplicationFactor(2)
-                                                                  .setZoneReplicationFactor(zoneRep111)
-                                                                  .setRequiredReads(1)
-                                                                  .setRequiredWrites(1)
-                                                                  .setZoneCountReads(0)
-                                                                  .setZoneCountWrites(0)
-                                                                  .build();
+        StoreDefinition storeDef111 = defaultZonedStoreDefBuilder().setName("ZZ111")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(2)
+                                                                   .setZoneReplicationFactor(zoneRep111)
+                                                                   .setRequiredReads(1)
+                                                                   .setRequiredWrites(1)
+                                                                   .build();
         storeDefs.add(storeDef111);
         return storeDefs;
     }
 
+    /**
+     * Get a zoned 2/1/1 store in zone 0 and 1 with specified storageType
+     */
     public static List<StoreDefinition> getZZ211StoreDefs(String storageType) {
 
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
         HashMap<Integer, Integer> zoneRep211 = new HashMap<Integer, Integer>();
         zoneRep211.put(0, 2);
         zoneRep211.put(1, 2);
-        StoreDefinition storeDef211 = new StoreDefinitionBuilder().setName("ZZ211")
-                                                                  .setType(storageType)
-                                                                  .setRoutingPolicy(RoutingTier.CLIENT)
-                                                                  .setRoutingStrategyType(RoutingStrategyType.ZONE_STRATEGY)
-                                                                  .setKeySerializer(new SerializerDefinition("string"))
-                                                                  .setValueSerializer(new SerializerDefinition("string"))
-                                                                  .setReplicationFactor(4)
-                                                                  .setZoneReplicationFactor(zoneRep211)
-                                                                  .setRequiredReads(1)
-                                                                  .setRequiredWrites(1)
-                                                                  .setZoneCountReads(0)
-                                                                  .setZoneCountWrites(0)
-                                                                  .build();
+        StoreDefinition storeDef211 = defaultZonedStoreDefBuilder().setName("ZZ211")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(4)
+                                                                   .setZoneReplicationFactor(zoneRep211)
+                                                                   .setRequiredReads(1)
+                                                                   .setRequiredWrites(1)
+                                                                   .build();
         storeDefs.add(storeDef211);
         return storeDefs;
     }
 
+    /**
+     * Get a zoned 3/2/2 store in zone 0 and 1 with specified storageType
+     */
     public static List<StoreDefinition> getZZ322StoreDefs(String storageType) {
 
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
         HashMap<Integer, Integer> zoneRep322 = new HashMap<Integer, Integer>();
         zoneRep322.put(0, 3);
         zoneRep322.put(1, 3);
-        StoreDefinition storeDef322 = new StoreDefinitionBuilder().setName("ZZ322")
-                                                                  .setType(storageType)
-                                                                  .setRoutingPolicy(RoutingTier.CLIENT)
-                                                                  .setRoutingStrategyType(RoutingStrategyType.ZONE_STRATEGY)
-                                                                  .setKeySerializer(new SerializerDefinition("string"))
-                                                                  .setValueSerializer(new SerializerDefinition("string"))
-                                                                  .setReplicationFactor(6)
-                                                                  .setZoneReplicationFactor(zoneRep322)
-                                                                  .setRequiredReads(2)
-                                                                  .setRequiredWrites(2)
-                                                                  .setZoneCountReads(0)
-                                                                  .setZoneCountWrites(0)
-                                                                  .build();
+        StoreDefinition storeDef322 = defaultZonedStoreDefBuilder().setName("ZZ322")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(6)
+                                                                   .setZoneReplicationFactor(zoneRep322)
+                                                                   .setRequiredReads(2)
+                                                                   .setRequiredWrites(2)
+                                                                   .build();
         storeDefs.add(storeDef322);
         return storeDefs;
     }
 
+    /**
+     * Get a zoned 3/2/2 store in zone 0 and 2 with specified storageType
+     */
     public static List<StoreDefinition> getZZ322StoreDefsWithNonContiguousZoneIds(String storageType) {
 
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
         HashMap<Integer, Integer> zoneRep322 = new HashMap<Integer, Integer>();
         zoneRep322.put(0, 3);
         zoneRep322.put(2, 3);
-        StoreDefinition storeDef322 = new StoreDefinitionBuilder().setName("ZZ322")
-                                                                  .setType(storageType)
-                                                                  .setRoutingPolicy(RoutingTier.CLIENT)
-                                                                  .setRoutingStrategyType(RoutingStrategyType.ZONE_STRATEGY)
-                                                                  .setKeySerializer(new SerializerDefinition("string"))
-                                                                  .setValueSerializer(new SerializerDefinition("string"))
-                                                                  .setReplicationFactor(6)
-                                                                  .setZoneReplicationFactor(zoneRep322)
-                                                                  .setRequiredReads(2)
-                                                                  .setRequiredWrites(2)
-                                                                  .setZoneCountReads(0)
-                                                                  .setZoneCountWrites(0)
-                                                                  .build();
+        StoreDefinition storeDef322 = defaultZonedStoreDefBuilder().setName("ZZ322")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(6)
+                                                                   .setZoneReplicationFactor(zoneRep322)
+                                                                   .setRequiredReads(2)
+                                                                   .setRequiredWrites(2)
+                                                                   .build();
         storeDefs.add(storeDef322);
         return storeDefs;
     }
 
     /**
-     * Store defs for zoned clusters with 2 zones. Covers the three store
-     * definitions of interest: 3/2/2, 2/1/1, and
+     * Get three zoned In-Memory stores in zone 0 and 1 Store configs are 1/1/1,
+     * 2/1/1 and 3/2/2
      */
     public static List<StoreDefinition> getZZStoreDefsInMemory() {
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
@@ -147,12 +256,19 @@ public class ClusterTestUtils {
         return storeDefs;
     }
 
+    /**
+     * Get one zoned In-Memory 3/2/2 store in zone 0 and 2
+     */
     public static List<StoreDefinition> getZZStoreDefsWithNonContiguousZoneIDsInMemory() {
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
         storeDefs.addAll(getZZ322StoreDefsWithNonContiguousZoneIds(InMemoryStorageConfiguration.TYPE_NAME));
         return storeDefs;
     }
 
+    /**
+     * Get three zoned BDB stores in zone 0 and 1 Store configs are 1/1/1, 2/1/1
+     * and 3/2/2
+     */
     public static List<StoreDefinition> getZZStoreDefsBDB() {
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
         storeDefs.addAll(getZZ111StoreDefs(BdbStorageConfiguration.TYPE_NAME));
@@ -161,6 +277,9 @@ public class ClusterTestUtils {
         return storeDefs;
     }
 
+    /**
+     * Get a zoned 1/1/1 store in zone 0,1 and 2 with specified storageType
+     */
     public static List<StoreDefinition> getZZZ111StoreDefs(String storageType) {
 
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
@@ -168,23 +287,20 @@ public class ClusterTestUtils {
         zoneRep111.put(0, 1);
         zoneRep111.put(1, 1);
         zoneRep111.put(2, 1);
-        StoreDefinition storeDef111 = new StoreDefinitionBuilder().setName("ZZ111")
-                                                                  .setType(storageType)
-                                                                  .setRoutingPolicy(RoutingTier.CLIENT)
-                                                                  .setRoutingStrategyType(RoutingStrategyType.ZONE_STRATEGY)
-                                                                  .setKeySerializer(new SerializerDefinition("string"))
-                                                                  .setValueSerializer(new SerializerDefinition("string"))
-                                                                  .setReplicationFactor(3)
-                                                                  .setZoneReplicationFactor(zoneRep111)
-                                                                  .setRequiredReads(1)
-                                                                  .setRequiredWrites(1)
-                                                                  .setZoneCountReads(0)
-                                                                  .setZoneCountWrites(0)
-                                                                  .build();
+        StoreDefinition storeDef111 = defaultZonedStoreDefBuilder().setName("ZZ111")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(3)
+                                                                   .setZoneReplicationFactor(zoneRep111)
+                                                                   .setRequiredReads(1)
+                                                                   .setRequiredWrites(1)
+                                                                   .build();
         storeDefs.add(storeDef111);
         return storeDefs;
     }
 
+    /**
+     * Get a zoned 2/1/1 store in zone 0,1 and 2 with specified storageType
+     */
     public static List<StoreDefinition> getZZZ211StoreDefs(String storageType) {
 
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
@@ -192,23 +308,20 @@ public class ClusterTestUtils {
         zoneRep211.put(0, 2);
         zoneRep211.put(1, 2);
         zoneRep211.put(2, 2);
-        StoreDefinition storeDef211 = new StoreDefinitionBuilder().setName("ZZ211")
-                                                                  .setType(storageType)
-                                                                  .setRoutingPolicy(RoutingTier.CLIENT)
-                                                                  .setRoutingStrategyType(RoutingStrategyType.ZONE_STRATEGY)
-                                                                  .setKeySerializer(new SerializerDefinition("string"))
-                                                                  .setValueSerializer(new SerializerDefinition("string"))
-                                                                  .setReplicationFactor(6)
-                                                                  .setZoneReplicationFactor(zoneRep211)
-                                                                  .setRequiredReads(1)
-                                                                  .setRequiredWrites(1)
-                                                                  .setZoneCountReads(0)
-                                                                  .setZoneCountWrites(0)
-                                                                  .build();
+        StoreDefinition storeDef211 = defaultZonedStoreDefBuilder().setName("ZZ211")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(6)
+                                                                   .setZoneReplicationFactor(zoneRep211)
+                                                                   .setRequiredReads(1)
+                                                                   .setRequiredWrites(1)
+                                                                   .build();
         storeDefs.add(storeDef211);
         return storeDefs;
     }
 
+    /**
+     * Get a zoned 3/2/2 store in zone 0,1 and 2 with specified storageType
+     */
     public static List<StoreDefinition> getZZZ322StoreDefs(String storageType) {
 
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
@@ -216,26 +329,20 @@ public class ClusterTestUtils {
         zoneRep322.put(0, 3);
         zoneRep322.put(1, 3);
         zoneRep322.put(2, 3);
-        StoreDefinition storeDef322 = new StoreDefinitionBuilder().setName("ZZ322")
-                                                                  .setType(storageType)
-                                                                  .setRoutingPolicy(RoutingTier.CLIENT)
-                                                                  .setRoutingStrategyType(RoutingStrategyType.ZONE_STRATEGY)
-                                                                  .setKeySerializer(new SerializerDefinition("string"))
-                                                                  .setValueSerializer(new SerializerDefinition("string"))
-                                                                  .setReplicationFactor(9)
-                                                                  .setZoneReplicationFactor(zoneRep322)
-                                                                  .setRequiredReads(2)
-                                                                  .setRequiredWrites(2)
-                                                                  .setZoneCountReads(0)
-                                                                  .setZoneCountWrites(0)
-                                                                  .build();
+        StoreDefinition storeDef322 = defaultZonedStoreDefBuilder().setName("ZZZ322")
+                                                                   .setType(storageType)
+                                                                   .setReplicationFactor(9)
+                                                                   .setZoneReplicationFactor(zoneRep322)
+                                                                   .setRequiredReads(2)
+                                                                   .setRequiredWrites(2)
+                                                                   .build();
         storeDefs.add(storeDef322);
         return storeDefs;
     }
 
     /**
-     * Store defs for zoned clusters with 2 zones. Covers the three store
-     * definitions of interest: 3/2/2, 2/1/1, and
+     * Get three zoned In-Memory stores in zone 0,1 and 2 Store configs are
+     * 1/1/1, 2/1/1 and 3/2/2
      */
     public static List<StoreDefinition> getZZZStoreDefsInMemory() {
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
@@ -245,6 +352,10 @@ public class ClusterTestUtils {
         return storeDefs;
     }
 
+    /**
+     * Get three zoned BDB stores in zone 0,1 and 2 Store configs are 1/1/1,
+     * 2/1/1 and 3/2/2
+     */
     public static List<StoreDefinition> getZZZStoreDefsBDB() {
         List<StoreDefinition> storeDefs = new LinkedList<StoreDefinition>();
         storeDefs.addAll(getZZZ111StoreDefs(BdbStorageConfiguration.TYPE_NAME));
@@ -277,9 +388,30 @@ public class ClusterTestUtils {
     }
 
     /**
+     * return a non-zoned cluster
+     */
+    public static Cluster getNZCluster() {
+        int nodes[] = new int[] { 0, 1, 2, 3, 4, 5 };
+        int partitionMap[][] = new int[][] { { 0, 6, 12, 16, 17 }, { 1, 7, 15 }, { 2, 8, 14 },
+                { 3, 9, 13 }, { 4, 10 }, { 5, 11 } };
+        return ServerTestUtils.getLocalNonZonedCluster(nodes, partitionMap, getClusterPorts());
+    }
+
+    /**
      * The 'Z' and 'E' prefixes in these method names indicate zones with
      * partitions and zones without partitions.
      */
+    public static Cluster getZCluster() {
+        int numberOfZones = 1;
+        int nodesPerZone[][] = new int[][] { { 0, 1, 2, 3, 4, 5 } };
+        int partitionMap[][] = new int[][] { { 0, 6, 12, 16, 17 }, { 1, 7, 15 }, { 2, 8, 14 },
+                { 3, 9, 13 }, { 4, 10 }, { 5, 11 } };
+        return ServerTestUtils.getLocalZonedCluster(numberOfZones,
+                                                    nodesPerZone,
+                                                    partitionMap,
+                                                    getClusterPorts());
+    }
+
     public static Cluster getZZCluster() {
         int numberOfZones = 2;
         int nodesPerZone[][] = new int[][] { { 0, 1, 2 }, { 3, 4, 5 } };

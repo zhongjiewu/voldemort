@@ -626,6 +626,33 @@ public class ServerTestUtils {
         return new Cluster("cluster", nodes, zones);
     }
 
+    public static Cluster getLocalNonZonedCluster(int[] nodeIds, int[][] partitionMap, int[] ports) {
+        int numNodes = nodeIds.length;
+        if(partitionMap.length != numNodes) {
+            throw new VoldemortException("Mismatch between numNodes (" + numNodes
+                                         + ") and size of partitionMap array (" + partitionMap
+                                         + ").");
+        }
+
+        // Generate nodes
+        List<Node> nodes = new ArrayList<Node>();
+        int offset = 0;
+        for(int nodeId: nodeIds) {
+            List<Integer> partitions = new ArrayList<Integer>(partitionMap[nodeId].length);
+            for(int p: partitionMap[offset]) {
+                partitions.add(p);
+            }
+            nodes.add(new Node(nodeId,
+                               "localhost",
+                               ports[nodeId * 3],
+                               ports[nodeId * 3 + 1],
+                               ports[nodeId * 3 + 2],
+                               partitions));
+            offset++;
+        }
+        return new Cluster("cluster", nodes);
+    }
+
     public static Node getLocalNode(int nodeId, List<Integer> partitions) {
         int[] ports = findFreePorts(3);
         return new Node(nodeId, "localhost", ports[0], ports[1], ports[2], partitions);
@@ -1083,5 +1110,4 @@ public class ServerTestUtils {
 
         return cluster;
     }
-
 }
