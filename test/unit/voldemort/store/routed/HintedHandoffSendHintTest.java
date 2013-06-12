@@ -1,7 +1,21 @@
+/*
+ * Copyright 2013 LinkedIn, Inc
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package voldemort.store.routed;
 
 import static org.junit.Assert.assertTrue;
-import static voldemort.VoldemortTestConstants.getNineNodeCluster;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,6 +37,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import voldemort.ClusterTestUtils;
 import voldemort.ServerTestUtils;
 import voldemort.TestUtils;
 import voldemort.client.ClientConfig;
@@ -96,7 +111,6 @@ public class HintedHandoffSendHintTest {
     private final static int SOCKET_TIMEOUT_MS = 500;
 
     private final Class<? extends FailureDetector> failureDetectorCls = ThresholdFailureDetector.class;
-    private final HintedHandoffStrategyType hintRoutingStrategy;
 
     private final Map<Integer, Store<ByteArray, byte[], byte[]>> subStores = new ConcurrentHashMap<Integer, Store<ByteArray, byte[], byte[]>>();
     private final Map<Integer, ForceFailStore<ByteArray, byte[], byte[]>> forceFailStores = new ConcurrentHashMap<Integer, ForceFailStore<ByteArray, byte[], byte[]>>();
@@ -153,11 +167,7 @@ public class HintedHandoffSendHintTest {
         }
     }
 
-    public HintedHandoffSendHintTest(HintedHandoffStrategyType hintRoutingStrategy,
-                                     int replicationFactor,
-                                     int requiredWrites,
-                                     int preferredWrites) {
-        this.hintRoutingStrategy = hintRoutingStrategy;
+    public HintedHandoffSendHintTest(int replicationFactor, int requiredWrites, int preferredWrites) {
         this.REPLICATION_FACTOR = replicationFactor;
         this.R_WRITES = requiredWrites;
         this.P_WRITES = preferredWrites;
@@ -165,21 +175,8 @@ public class HintedHandoffSendHintTest {
 
     @Parameterized.Parameters
     public static Collection<Object[]> configs() {
-        return Arrays.asList(new Object[][] {
-                { HintedHandoffStrategyType.CONSISTENT_STRATEGY, 3, 1, 1 },
-                { HintedHandoffStrategyType.CONSISTENT_STRATEGY, 3, 1, 2 },
-                { HintedHandoffStrategyType.CONSISTENT_STRATEGY, 3, 1, 3 },
-                { HintedHandoffStrategyType.CONSISTENT_STRATEGY, 3, 2, 2 },
-                { HintedHandoffStrategyType.CONSISTENT_STRATEGY, 3, 2, 3 },
-                { HintedHandoffStrategyType.CONSISTENT_STRATEGY, 2, 1, 1 },
-                { HintedHandoffStrategyType.CONSISTENT_STRATEGY, 2, 1, 2 },
-                { HintedHandoffStrategyType.PROXIMITY_STRATEGY, 3, 1, 1 },
-                { HintedHandoffStrategyType.PROXIMITY_STRATEGY, 3, 1, 2 },
-                { HintedHandoffStrategyType.PROXIMITY_STRATEGY, 3, 1, 3 },
-                { HintedHandoffStrategyType.PROXIMITY_STRATEGY, 3, 2, 2 },
-                { HintedHandoffStrategyType.PROXIMITY_STRATEGY, 3, 2, 3 },
-                { HintedHandoffStrategyType.PROXIMITY_STRATEGY, 2, 1, 1 },
-                { HintedHandoffStrategyType.PROXIMITY_STRATEGY, 2, 1, 2 } });
+        return Arrays.asList(new Object[][] { { 3, 1, 1 }, { 3, 1, 2 }, { 3, 1, 3 }, { 3, 2, 2 },
+                { 3, 2, 3 }, { 2, 1, 1 }, { 2, 1, 2 } });
     }
 
     private StoreDefinition getStoreDef() {
@@ -195,7 +192,7 @@ public class HintedHandoffSendHintTest {
                                            .setRequiredReads(R_READS)
                                            .setPreferredWrites(P_WRITES)
                                            .setRequiredWrites(R_WRITES)
-                                           .setHintedHandoffStrategy(this.hintRoutingStrategy)
+                                           .setHintedHandoffStrategy(HintedHandoffStrategyType.PROXIMITY_STRATEGY)
                                            .build();
     }
 
@@ -205,7 +202,7 @@ public class HintedHandoffSendHintTest {
             logger.debug("Test Started: replication[" + REPLICATION_FACTOR + "], preferredW["
                          + P_WRITES + "], requiredW[" + R_WRITES + "]");
         }
-        cluster = getNineNodeCluster();
+        cluster = ClusterTestUtils.getZZZCluster();
         storeDef = getStoreDef();
 
         // create voldemort servers
