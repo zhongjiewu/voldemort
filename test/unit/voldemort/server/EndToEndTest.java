@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 LinkedIn, Inc
+ * Copyright 2012-2013 LinkedIn, Inc
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -22,6 +22,8 @@ import static org.junit.Assert.assertNull;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -32,13 +34,16 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import voldemort.ClusterTestUtils;
 import voldemort.ServerTestUtils;
+import voldemort.TestUtils;
 import voldemort.client.ClientConfig;
 import voldemort.client.SocketStoreClientFactory;
 import voldemort.client.StoreClient;
 import voldemort.client.StoreClientFactory;
 import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
+import voldemort.store.StoreDefinition;
 import voldemort.store.socket.SocketStoreFactory;
 import voldemort.store.socket.clientrequest.ClientRequestExecutorPool;
 import voldemort.versioning.Occurred;
@@ -53,48 +58,60 @@ import voldemort.versioning.Versioned;
 @RunWith(Parameterized.class)
 public class EndToEndTest {
 
-    private static final String STORE_NAME = "test-readrepair-memory";
-    private static final String STORES_XML = "test/common/voldemort/config/stores.xml";
+    private String storeName = "";
     private final SocketStoreFactory socketStoreFactory = new ClientRequestExecutorPool(2,
                                                                                         10000,
                                                                                         100000,
                                                                                         32 * 1024);
-    private final boolean useNio;
+    private final Cluster cluster;
+    private final List<StoreDefinition> storeDefs;
 
     private StoreClient<String, String> storeClient;
+    private Map<Integer, VoldemortServer> servers = new HashMap<Integer, VoldemortServer>();
 
-    public EndToEndTest(boolean useNio) {
-        this.useNio = useNio;
+    public EndToEndTest(Cluster cluster, List<StoreDefinition> storeDefs) {
+        this.cluster = cluster;
+        this.storeDefs = storeDefs;
+        this.storeName = storeDefs.get(0).getName();
     }
 
     @Parameters
     public static Collection<Object[]> configs() {
-        return Arrays.asList(new Object[][] { { true }, { false } });
+        return Arrays.asList(new Object[][] {
+                { ClusterTestUtils.getNZCluster(), ClusterTestUtils.getNZ322StoreDefs("bdb") },
+                { ClusterTestUtils.getZCluster(), ClusterTestUtils.getZ322StoreDefs("bdb") },
+                { ClusterTestUtils.getZZCluster(), ClusterTestUtils.getZZ322StoreDefs("bdb") },
+                { ClusterTestUtils.getZZZCluster(), ClusterTestUtils.getZZZ322StoreDefs("bdb") } });
     }
 
     @Before
     public void setUp() throws IOException {
-        int numServers = 2;
-        VoldemortServer[] servers = new VoldemortServer[numServers];
-        int partitionMap[][] = { { 0, 2, 4, 6 }, { 1, 3, 5, 7 } };
-        Cluster cluster = ServerTestUtils.startVoldemortCluster(numServers,
-                                                                servers,
-                                                                partitionMap,
-                                                                socketStoreFactory,
-                                                                useNio,
-                                                                null,
-                                                                STORES_XML,
-                                                                new Properties());
+        for(Integer nodeId: cluster.getNodeIds()) {
+            VoldemortConfig config = ServerTestUtils.createServerConfigWithDefs(true,
+                                                                                nodeId,
+                                                                                TestUtils.createTempDir()
+                                                                                         .getAbsolutePath(),
+                                                                                cluster,
+                                                                                storeDefs,
+                                                                                new Properties());
+            VoldemortServer server = ServerTestUtils.startVoldemortServer(socketStoreFactory,
+                                                                          config);
+            servers.put(nodeId, server);
+        }
 
         Node node = cluster.getNodeById(0);
         String bootstrapUrl = "tcp://" + node.getHost() + ":" + node.getSocketPort();
-        StoreClientFactory storeClientFactory = new SocketStoreClientFactory(new ClientConfig().setBootstrapUrls(bootstrapUrl));
-        storeClient = storeClientFactory.getStoreClient(STORE_NAME);
+        StoreClientFactory storeClientFactory = new SocketStoreClientFactory(new ClientConfig().setBootstrapUrls(bootstrapUrl)
+                                                                                               .enableDefaultClient(false));
+        storeClient = storeClientFactory.getStoreClient(storeName);
     }
 
     @After
     public void tearDown() {
         socketStoreFactory.close();
+        for(VoldemortServer server: servers.values()) {
+            server.stop();
+        }
     }
 
     /**
