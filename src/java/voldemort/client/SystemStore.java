@@ -132,7 +132,6 @@ public class SystemStore<K, V> {
               .setSocketTimeout(baseConfig.getSysSocketTimeout(), TimeUnit.MILLISECONDS)
               .setRoutingTimeout(baseConfig.getSysRoutingTimeout(), TimeUnit.MILLISECONDS)
               .setEnableJmx(baseConfig.getSysEnableJmx())
-              .setEnablePipelineRoutedStore(baseConfig.getSysEnablePipelineRoutedStore())
               .setClientZoneId(clientZoneID);
         this.socketStoreFactory = new SocketStoreClientFactory(config);
         this.storeName = storeName;
