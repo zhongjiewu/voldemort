@@ -53,6 +53,7 @@ import voldemort.utils.JNAUtils;
 import voldemort.utils.RebalanceUtils;
 import voldemort.utils.SystemTime;
 import voldemort.utils.Utils;
+import voldemort.versioning.VectorClock;
 import voldemort.versioning.Versioned;
 import voldemort.xml.ClusterMapper;
 
@@ -108,8 +109,11 @@ public class VoldemortServer extends AbstractService {
         ConfigurationStorageEngine metadataInnerEngine = new ConfigurationStorageEngine("metadata-config-store",
                                                                                         voldemortConfig.getMetadataDirectory());
         // transforms are not required here
+        VectorClock version = new VectorClock();
+        version.incrementVersion(0, System.currentTimeMillis());
         metadataInnerEngine.put(MetadataStore.CLUSTER_KEY,
-                                new Versioned<String>(new ClusterMapper().writeCluster(cluster)),
+                                new Versioned<String>(new ClusterMapper().writeCluster(cluster),
+                                                      version),
                                 null);
         this.metadata = new MetadataStore(metadataInnerEngine, voldemortConfig.getNodeId());
 
