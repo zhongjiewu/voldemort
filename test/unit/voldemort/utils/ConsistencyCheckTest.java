@@ -33,12 +33,14 @@ import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 
+import voldemort.ClusterTestUtils;
 import voldemort.ServerTestUtils;
 import voldemort.client.ClientConfig;
 import voldemort.client.protocol.admin.AdminClient;
 import voldemort.client.protocol.admin.AdminClientConfig;
 import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
+import voldemort.routing.ConsistentRoutingStrategy;
 import voldemort.routing.RoutingStrategy;
 import voldemort.routing.RoutingStrategyFactory;
 import voldemort.server.VoldemortServer;
@@ -153,6 +155,30 @@ public class ConsistencyCheckTest {
         assertFalse(rc2.isExpired(vc2));
         assertFalse(rc2.isExpired(hv3));
         assertTrue(rc2.isExpired(vc3));
+    }
+
+    @Test
+    public void testKeyPartitionChecker() {
+        /* a mockup class which will always map key to partition 1 */
+        class RoutingStrategyForTest extends ConsistentRoutingStrategy {
+
+            public RoutingStrategyForTest() {
+                super(ClusterTestUtils.getZZCluster(), 0);
+            }
+
+            @Override
+            public Integer getMasterPartition(byte[] key) {
+                return 1;
+            }
+        }
+        RoutingStrategy strategy = new RoutingStrategyForTest();
+        ConsistencyCheck.KeyPartitionChecker kpc1 = new ConsistencyCheck.KeyPartitionChecker(strategy, 1);
+        ConsistencyCheck.KeyPartitionChecker kpc2 = new ConsistencyCheck.KeyPartitionChecker(strategy, 2);
+
+        assertTrue(kpc1.isValid(new ByteArray(value1)));
+        assertTrue(kpc1.isValid(new ByteArray(value2)));
+        assertFalse(kpc2.isValid(new ByteArray(value1)));
+        assertFalse(kpc2.isValid(new ByteArray(value2)));
     }
 
     @Test
