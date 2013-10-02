@@ -40,6 +40,8 @@ import voldemort.client.protocol.admin.AdminClient;
 import voldemort.client.protocol.admin.AdminClientConfig;
 import voldemort.cluster.Cluster;
 import voldemort.cluster.Node;
+import voldemort.routing.ConsistentRoutingStrategy;
+import voldemort.routing.RoutingStrategy;
 import voldemort.routing.RoutingStrategyFactory;
 import voldemort.store.StoreDefinition;
 import voldemort.versioning.Occurred;
@@ -63,6 +65,7 @@ public class ConsistencyCheck {
     private List<ClusterNode> clusterNodeList = new ArrayList<ClusterNode>();
     private final Map<ByteArray, Map<Version, Set<ClusterNode>>> keyVersionNodeSetMap = new HashMap<ByteArray, Map<Version, Set<ClusterNode>>>();
     private RetentionChecker retentionChecker;
+    private KeyPartitionChecker keyPartitionChecker;
     private KeyFetchTracker keyFetchTracker;
 
     public ConsistencyCheck(List<String> urls,
@@ -126,7 +129,7 @@ public class ConsistencyCheck {
         for(String url: urls) {
             StoreDefinition storeDefinition = storeDefinitionMap.get(url);
             Cluster cluster = clusterMap.get(url);
-            Map<Integer, Integer> partitionToNodeMap = ClusterUtils.getCurrentPartitionMapping(cluster);
+            Map<Integer, Integer> partitionToNodeMap = cluster.getPartitionIdToNodeIdMap();
 
             /* find list of nodeId hosting partition */
             List<Integer> partitionList = new RoutingStrategyFactory().updateRoutingStrategy(storeDefinition,
@@ -185,6 +188,11 @@ public class ConsistencyCheck {
             throw new VoldemortException("Will not connect because replication factor does not accord with number of nodes routed to.");
         }
         retentionChecker = new RetentionChecker(retentionDays);
+
+        /* the second parameter of the ConsistentRoutingStrategy does not matter here */
+        Cluster firstCluster = clusterMap.values().iterator().next();
+        RoutingStrategy strategy = new ConsistentRoutingStrategy(firstCluster, 1);
+        keyPartitionChecker = new KeyPartitionChecker(strategy, partitionId);
     }
 
     /**
@@ -299,6 +307,12 @@ public class ConsistencyCheck {
         // skip version if expired
         if(retentionChecker.isExpired(version)) {
             reporter.recordExpired(1);
+            return;
+        }
+
+        // skip invalid keys
+        if(!keyPartitionChecker.isValid(key)) {
+            reporter.recordWrongPartition(1);
             return;
         }
 
@@ -545,6 +559,35 @@ public class ConsistencyCheck {
     }
 
     /**
+     * A checker to determine if a key belongs to a partition
+     * 
+     */
+    protected static class KeyPartitionChecker {
+
+        final private RoutingStrategy router;
+        final private Integer partition;
+
+        /**
+         * @param router RoutingStrategy
+         * @param partitionId The partition Id to check against
+         */
+        public KeyPartitionChecker(RoutingStrategy router, Integer partitionId) {
+            this.router = router;
+            this.partition = partitionId;
+        }
+
+        /**
+         * Determine if a key belongs to the correct partition
+         * 
+         * @param key Key in ByteArray
+         * @return if the key belongs to the correct partition
+         */
+        public boolean isValid(ByteArray key) {
+            return router.getMasterPartition(key.get()) == partition;
+        }
+    }
+
+    /**
      * Used to report bad keys, progress, and statistics
      * 
      */
@@ -557,6 +600,7 @@ public class ConsistencyCheck {
         long numRecordsScanned = 0;
         long numRecordsScannedLast = 0;
         long numExpiredRecords = 0;
+        long numWrongPartitionRecords = 0;
         long numGoodKeys = 0;
         long numTotalKeys = 0;
 
@@ -586,6 +630,10 @@ public class ConsistencyCheck {
             numExpiredRecords += count;
         }
 
+        public void recordWrongPartition(long count) {
+            numWrongPartitionRecords += count;
+        }
+
         public String tryProgressReport() {
             if(System.currentTimeMillis() > lastReportTimeMs + reportPeriodMs) {
                 long currentTimeMs = System.currentTimeMillis();
@@ -593,6 +641,7 @@ public class ConsistencyCheck {
                 s.append("=====Progress=====\n");
                 s.append("Records Scanned: " + numRecordsScanned + "\n");
                 s.append("Records Ignored: " + numExpiredRecords + " (Out of Retention)\n");
+                s.append("Records Ignored: " + numWrongPartitionRecords + " (Wrong Partition)\n");
                 s.append("Last Fetch Rate: " + (numRecordsScanned - numRecordsScannedLast)
                          / ((currentTimeMs - lastReportTimeMs) / 1000) + " (records/s)\n");
                 lastReportTimeMs = currentTimeMs;
@@ -603,10 +652,11 @@ public class ConsistencyCheck {
             }
         }
 
-        public void processInconsistentKeys(String storeName,
-                                            Integer partitionId,
-                                            Map<ByteArray, Map<Version, Set<ClusterNode>>> keyVersionNodeSetMap)
-                throws IOException {
+        public void
+                processInconsistentKeys(String storeName,
+                                        Integer partitionId,
+                                        Map<ByteArray, Map<Version, Set<ClusterNode>>> keyVersionNodeSetMap)
+                        throws IOException {
             if(logger.isDebugEnabled()) {
                 logger.debug("TYPE,Store,ParId,Key,ServerSet,VersionTS,VectorClock[,ValueHash]");
             }
@@ -698,8 +748,9 @@ public class ConsistencyCheck {
      * @param replicationFactor Total replication factor for the set of clusters
      * @return ConsistencyLevel Enum
      */
-    public static ConsistencyLevel determineConsistency(Map<Version, Set<ClusterNode>> versionNodeSetMap,
-                                                        int replicationFactor) {
+    public static ConsistencyLevel
+            determineConsistency(Map<Version, Set<ClusterNode>> versionNodeSetMap,
+                                 int replicationFactor) {
         boolean fullyConsistent = true;
         Version latestVersion = null;
         for(Map.Entry<Version, Set<ClusterNode>> versionNodeSetEntry: versionNodeSetMap.entrySet()) {
@@ -734,8 +785,9 @@ public class ConsistencyCheck {
      *        that maps versions to set of PrefixNodes
      * @param requiredWrite Required Write configuration
      */
-    public static void cleanIneligibleKeys(Map<ByteArray, Map<Version, Set<ClusterNode>>> keyVersionNodeSetMap,
-                                           int requiredWrite) {
+    public static void
+            cleanIneligibleKeys(Map<ByteArray, Map<Version, Set<ClusterNode>>> keyVersionNodeSetMap,
+                                int requiredWrite) {
         Set<ByteArray> keysToDelete = new HashSet<ByteArray>();
         for(Map.Entry<ByteArray, Map<Version, Set<ClusterNode>>> entry: keyVersionNodeSetMap.entrySet()) {
             Set<Version> versionsToDelete = new HashSet<Version>();
