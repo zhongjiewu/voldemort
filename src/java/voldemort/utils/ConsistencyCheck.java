@@ -129,14 +129,14 @@ public class ConsistencyCheck {
         for(String url: urls) {
             StoreDefinition storeDefinition = storeDefinitionMap.get(url);
             Cluster cluster = clusterMap.get(url);
-            Map<Integer, Integer> partitionToNodeMap = cluster.getPartitionIdToNodeIdMap();
+            Map<Integer, Node> partitionToNodeMap = cluster.getPartitionIdToNodeMap();
 
             /* find list of nodeId hosting partition */
             List<Integer> partitionList = new RoutingStrategyFactory().updateRoutingStrategy(storeDefinition,
                                                                                              cluster)
                                                                       .getReplicatingPartitionList(partitionId);
             for(int partition: partitionList) {
-                Integer nodeId = partitionToNodeMap.get(partition);
+                Integer nodeId = partitionToNodeMap.get(partition).getId();
                 Node node = cluster.getNodeById(nodeId);
                 clusterNodeList.add(new ClusterNode(urls.indexOf(url), node));
             }

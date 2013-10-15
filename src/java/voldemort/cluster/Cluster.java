@@ -56,6 +56,7 @@ public class Cluster implements Serializable {
     private final Map<Zone, List<Integer>> partitionsPerZone;
     private final Map<Integer, Zone> partitionIdToZone;
     private final Node[] partitionIdToNodeArray;
+    private final Map<Integer, Node> partitionIdToNodeMap;
 
     public Cluster(String name, List<Node> nodes) {
         this(name, nodes, new ArrayList<Zone>());
@@ -67,7 +68,7 @@ public class Cluster implements Serializable {
         this.nodesPerZone = new LinkedHashMap<Zone, List<Integer>>();
         this.partitionIdToZone = new HashMap<Integer, Zone>();
 
-        Map<Integer, Node> partitionIdToNodeMap = new HashMap<Integer, Node>();
+        partitionIdToNodeMap = new HashMap<Integer, Node>();
 
         if(zones.size() != 0) {
             zonesById = new LinkedHashMap<Integer, Zone>(zones.size());
@@ -219,6 +220,10 @@ public class Cluster implements Serializable {
 
     public Node[] getPartitionIdToNodeArray() {
         return this.partitionIdToNodeArray;
+    }
+
+    public Map<Integer, Node> getPartitionIdToNodeMap() {
+        return partitionIdToNodeMap;
     }
 
     public Node getNodeById(int id) {
