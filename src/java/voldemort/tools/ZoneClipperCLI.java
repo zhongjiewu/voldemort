@@ -10,6 +10,7 @@ import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
 import voldemort.cluster.Cluster;
@@ -46,10 +47,10 @@ public class ZoneClipperCLI {
         parser.accepts("current-cluster", "Path to current cluster xml")
               .withRequiredArg()
               .describedAs("cluster.xml");
-        parser.accepts("output-dir", "Specify the output directory for the new cluster.xml")
+        parser.accepts("output-file", "Specify the output file path for the new cluster.xml")
               .withRequiredArg()
               .ofType(String.class)
-              .describedAs("path");
+              .describedAs("output-file");
         parser.accepts("drop-zoneid", "Zone id that you want to drop.")
               .withRequiredArg()
               .describedAs("zoneid-to-drop")
@@ -65,7 +66,7 @@ public class ZoneClipperCLI {
         help.append("    --current-cluster <clusterXML>\n");
         help.append("    --drop-zoneid zoneId \n");
         help.append("  Optional:\n");
-        help.append("    --output-dir [ Output directory is where we store the final cluster ]\n");
+        help.append("    --output-file [ Output file where the final cluster xml is stored, default to print on STDOUT ]\n");
         try {
             parser.printHelpOn(System.out);
         } catch(IOException e) {
@@ -107,9 +108,9 @@ public class ZoneClipperCLI {
         Cluster initialCluster = new ClusterMapper().readCluster(new File(initialClusterXML));
 
         int dropZoneId = CmdUtils.valueOf(options, "drop-zoneid", Zone.UNSET_ZONE_ID);
-        String outputDir = null;
-        if (options.has("output-dir")) {
-            outputDir = (String) options.valueOf("output-dir");
+        String outputFile = null;
+        if(options.has("output-file")) {
+            outputFile = (String) options.valueOf("output-file");
         }
 
         // Create a list of current partition ids. We will use this set to
@@ -162,9 +163,11 @@ public class ZoneClipperCLI {
             logger.error("The list of partition ids in the initial and the final cluster doesn't match \n ");
         }
 
-        // Finally write the final cluster to a xml file
-        RebalanceUtils.dumpClusterToFile(outputDir,
-                                         RebalanceUtils.finalClusterFileName,
-                                         finalCluster);
+        // Finally write the final cluster to a xml file or print
+        String finalClusterXML = new ClusterMapper().writeCluster(finalCluster);
+        if (outputFile == null) {
+            System.out.println(finalClusterXML);
+        }
+        FileUtils.writeStringToFile(new File(outputFile), finalClusterXML);
     }
 }

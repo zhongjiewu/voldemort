@@ -16,9 +16,9 @@
 #  limitations under the License.
 
 # This script generates a final cluster.xml after dropping a zone from the current
-# cluster. The final cluster is placed in output_dir.
+# cluster. The final cluster is placed in the $output_file.
 
-# Argument = -c current_cluster -d drop_zoneid -o output dir
+# Argument = -c current_cluster -d drop_zoneid -o output_file
 #
 # This script steals partitions from other nodes in the zone that is being dropped 
 # and assigns them to the nodes in the surviving zones.
@@ -37,7 +37,7 @@ usage_and_exit() {
    -h     Show this message
    -c     Current cluster that describes the cluster
    -d     ZoneId that you want to drop
-   -o     Output dir where final file will be stored.
+   -o     Output file final cluster xml will be stored.
 EOF
 exit 1
 }
@@ -45,7 +45,7 @@ exit 1
 # initialize  variables to an empty string
 current_cluster=""
 drop_zoneid=""
-output_dir=""
+output_file=""
 
 # Figure out voldemort home directory
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -68,9 +68,9 @@ do
     echo "[rebalance-zone-shrinkage] Will rebalance on the stores described in '$drop_zoneid'."
     ;;
   o)
-    output_dir=$OPTARG
-    mkdir -p $output_dir
-    echo "[rebalance-zone-shrinkage] Using '$output_dir' for final files generated."
+    output_file=$OPTARG
+    mkdir -p $output_file
+    echo "[rebalance-zone-shrinkage] Using '$output_file' for final files generated."
     ;;
   ?)
     usage_and_exit
@@ -78,7 +78,7 @@ do
      esac
 done
 
-if [[ -z $current_cluster ]] || [[ -z $drop_zoneid ]] || [[ -z $output_dir ]]
+if [[ -z $current_cluster ]] || [[ -z $drop_zoneid ]] || [[ -z $output_file ]]
 then
      printf "\n"
      echo "[rebalance-zone-shrinkage] Missing argument. Check again."
@@ -91,9 +91,9 @@ if [ ! -e $current_cluster ]; then
 fi
 
 
-mkdir -p $output_dir
+mkdir -p $(dirname $output_file)
 $vold_home/bin/run-class.sh voldemort.tools.ZoneClipperCLI \
                             --current-cluster $current_cluster \
                             --drop-zoneid $drop_zoneid \
-                            --output-dir $output_dir/
+                            --output-file $output_file
 
