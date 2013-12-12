@@ -45,7 +45,7 @@ exit 1
 # initialize  variables to an empty string
 current_cluster=""
 drop_zoneid=""
-output_file=""
+output_file="shrunk.cluster.xml"
 
 # Figure out voldemort home directory
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -69,7 +69,7 @@ do
     ;;
   o)
     output_file=$OPTARG
-    mkdir -p $output_file
+    mkdir -p $(dirname $output_file)
     echo "[rebalance-zone-shrinkage] Using '$output_file' for final files generated."
     ;;
   ?)
@@ -91,7 +91,6 @@ if [ ! -e $current_cluster ]; then
 fi
 
 
-mkdir -p $(dirname $output_file)
 $vold_home/bin/run-class.sh voldemort.tools.ZoneClipperCLI \
                             --current-cluster $current_cluster \
                             --drop-zoneid $drop_zoneid \
