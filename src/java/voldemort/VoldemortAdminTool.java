@@ -510,11 +510,11 @@ public class VoldemortAdminTool {
                         if(!Utils.isReadableFile(metadataValue))
                             throw new VoldemortException("Stores definition xml file path incorrect");
                         StoreDefinitionsMapper mapper = new StoreDefinitionsMapper();
-                        List<StoreDefinition> storeDefs = mapper.readStoreList(new File(metadataValue));
+                        List<StoreDefinition> newStoreDefs = mapper.readStoreList(new File(metadataValue));
 
                         String AVRO_GENERIC_VERSIONED_TYPE_NAME = "avro-generic-versioned";
 
-                        for(StoreDefinition storeDef: storeDefs) {
+                        for(StoreDefinition storeDef: newStoreDefs) {
                             SerializerDefinition keySerDef = storeDef.getKeySerializer();
                             SerializerDefinition valueSerDef = storeDef.getValueSerializer();
 
@@ -530,27 +530,65 @@ public class VoldemortAdminTool {
 
                             }
                         }
+
+                        // original metadata
+                        Integer nodeIdToGetStoreXMLFrom = nodeId;
+                        if(nodeId < 0) {
+                            Collection<Node> nodes = adminClient.getAdminClientCluster().getNodes();
+                            if(nodes.isEmpty()) {
+                                throw new VoldemortException("No nodes in this cluster");
+                            } else {
+                                nodeIdToGetStoreXMLFrom = nodes.iterator().next().getId();
+                            }
+                        }
+
+                        Versioned<String> storesXML = adminClient.metadataMgmtOps
+                                .getRemoteMetadata(nodeIdToGetStoreXMLFrom, MetadataStore.STORES_KEY);
+
+                        List<StoreDefinition> oldStoreDefs = mapper.readStoreList(new StringReader(storesXML.getValue()));
+
                         executeSetMetadata(nodeId,
                                            adminClient,
                                            MetadataStore.STORES_KEY,
-                                           mapper.writeStoreList(storeDefs));
+                                           mapper.writeStoreList(newStoreDefs));
 
                         /*
-                         * This is a hack to update the metadata version of the
-                         * requested stores. TODO: Add the functionality to
-                         * Admin Client and Server to update one individual
-                         * store definition.
+                         * This is a hack to update the metadata version of the changing stores.
+                         * The client will compare the existing stores with the new data and
+                         * update the version of stores that is created, deleted or modified
                          */
-                        if(storeNames != null) {
-                            System.out.println("Updating metadata version for the following stores: "
-                                               + storeNames);
-                            try {
-                                for(String name: storeNames) {
-                                    adminClient.metadataMgmtOps.updateMetadataversion(name);
-                                }
-                            } catch(Exception e) {
-                                System.err.println("Error while updating metadata version for the specified store.");
+                        Set<String> storeNamesUnion = new HashSet<String>();
+                        Map<String, StoreDefinition> oldStoreDefinitionMap = new HashMap<String, StoreDefinition>();
+                        Map<String, StoreDefinition> newStoreDefinitionMap = new HashMap<String, StoreDefinition>();
+                        List<String> storesChanged = new ArrayList<String>();
+                        for(StoreDefinition storeDef: oldStoreDefs) {
+                            String storeName = storeDef.getName();
+                            storeNamesUnion.add(storeName);
+                            oldStoreDefinitionMap.put(storeName, storeDef);
+                        }
+                        for(StoreDefinition storeDef: newStoreDefs) {
+                            String storeName = storeDef.getName();
+                            storeNamesUnion.add(storeName);
+                            newStoreDefinitionMap.put(storeName, storeDef);
+                        }
+                        for(String storeName: storeNamesUnion) {
+                            StoreDefinition oldStoreDef = oldStoreDefinitionMap.get(storeName);
+                            StoreDefinition newStoreDef = newStoreDefinitionMap.get(storeName);
+                            if(oldStoreDef == null && newStoreDef != null || oldStoreDef != null && newStoreDef == null
+                            || oldStoreDef != null && newStoreDef !=null && !oldStoreDef.equals(newStoreDef)) {
+                               storesChanged.add(storeName);
                             }
+                        }
+                        if(nodeId >= 0) {
+                            System.err.println("WARNING: Metadata version update of stores goes to all servers, " +
+                                    "although this set-metadata oprations only goes to node " + nodeId);
+                        }
+                        System.out.println("Updating metadata version for the following stores: "
+                                + storeNames);
+                        try {
+                            adminClient.metadataMgmtOps.updateMetadataversion(storesChanged);
+                        } catch(Exception e) {
+                            System.err.println("Error while updating metadata version for the specified store.");
                         }
                     } else if(metadataKey.compareTo(MetadataStore.REBALANCING_STEAL_INFO) == 0) {
                         if(!Utils.isReadableFile(metadataValue))
