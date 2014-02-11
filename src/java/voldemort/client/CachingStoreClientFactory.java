@@ -55,17 +55,11 @@ public class CachingStoreClientFactory implements StoreClientFactory {
 
     @SuppressWarnings("unchecked")
     public <K, V> StoreClient<K, V> getStoreClient(String storeName) {
-        Pair<String, Object> key = Pair.create(storeName, null);
-        if(!cache.containsKey(key)) {
-            StoreClient<K, V> result = inner.getStoreClient(storeName);
-            cache.putIfAbsent(key, result);
-        }
-
-        return (StoreClient<K, V>) cache.get(key);
+        return getStoreClient(storeName, null);
     }
 
     @SuppressWarnings("unchecked")
-    public <K, V> StoreClient<K, V> getStoreClient(String storeName,
+    public synchronized <K, V> StoreClient<K, V> getStoreClient(String storeName,
                                                    InconsistencyResolver<Versioned<V>> resolver) {
         Pair<String, Object> key = Pair.create(storeName, (Object) resolver);
         if(!cache.containsKey(key)) {
