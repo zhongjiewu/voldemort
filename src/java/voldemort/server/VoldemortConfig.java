@@ -443,7 +443,7 @@ public class VoldemortConfig implements Serializable {
         this.clientThreadIdleMs = props.getInt("client.thread.idle.ms", 100000);
         this.clientMaxQueuedRequests = props.getInt("client.max.queued.requests", 1000);
 
-        this.enableHttpServer = props.getBoolean("http.enable", true);
+        this.enableHttpServer = props.getBoolean("http.enable", false);
         this.enableSocketServer = props.getBoolean("socket.enable", true);
         this.enableAdminServer = props.getBoolean("admin.enable", true);
         this.enableJmx = props.getBoolean("jmx.enable", true);
