@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -41,6 +39,7 @@ import voldemort.store.compress.CompressionStrategy;
 import voldemort.store.compress.CompressionStrategyFactory;
 import voldemort.store.slop.strategy.HintedHandoffStrategyType;
 import voldemort.store.socket.SocketStoreFactory;
+import voldemort.store.socket.TestSocketStoreFactory;
 import voldemort.store.socket.clientrequest.ClientRequestExecutorPool;
 import voldemort.utils.ByteArray;
 import voldemort.utils.Props;
@@ -48,6 +47,8 @@ import voldemort.versioning.Versioned;
 import voldemort.xml.StoreDefinitionsMapper;
 
 import com.google.common.collect.Lists;
+
+import static org.junit.Assert.assertEquals;
 
 /*
  * Starts a streaming session and inserts some keys Using fetchKeys we check if
@@ -59,7 +60,7 @@ import com.google.common.collect.Lists;
  * 
  */
 @RunWith(Parameterized.class)
-public class StreamingClientTest extends TestCase {
+public class StreamingClientTest {
 
     private long startTime;
     public final String SERVER_LOCAL_URL = "tcp://localhost:";
@@ -67,10 +68,7 @@ public class StreamingClientTest extends TestCase {
     public final String STORES_XML_FILE = "test/common/voldemort/config/stores.xml";
     public int numServers;
     private int NUM_KEYS_1 = 4000;
-    private SocketStoreFactory socketStoreFactory = new ClientRequestExecutorPool(6,
-                                                                                  10000,
-                                                                                  100000,
-                                                                                  32 * 1024);
+    private SocketStoreFactory socketStoreFactory = new TestSocketStoreFactory();
     private VoldemortServer[] servers = null;
     private int[] serverPorts = null;
     private Cluster cluster;
@@ -234,6 +232,18 @@ public class StreamingClientTest extends TestCase {
         assertEquals(verifyKeysExist(nodeIdOnWhichToVerifyKey), true);
 
     }
+
+    @Test
+    public void testUnInitializedClientPreventNPE() {
+
+        Props property = new Props();
+        property.put("streaming.platform.bootstrapURL", SERVER_LOCAL_URL + serverPorts[0]);
+        StreamingClientConfig config = new StreamingClientConfig(property);
+        BaseStreamingClient streamer = new BaseStreamingClient(config);
+        streamer.commitToVoldemort();
+    }
+
+
 
     /*
      * Checks if each node has the keys it is reponsible for returns false
