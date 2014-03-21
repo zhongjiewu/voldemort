@@ -297,6 +297,18 @@ public class VoldemortClientShell {
         client.delete(key);
     }
 
+
+    private void processTouch(String touchArgStr) throws IOException {
+        MutableInt parsePos = new MutableInt(0);
+        Object key = parseKey(touchArgStr, parsePos);
+        Versioned<Object> versioned = client.get(key);
+        if(versioned == null) {
+            commandOutput.println("Touch " + touchArgStr + ": key does not exist in store. Touch operation ignored");
+        } else {
+            client.put(key, versioned);
+        }
+    }
+
     protected void processCommands(boolean printCommands) throws IOException {
         for(String line = commandReader.readLine(); line != null; line = commandReader.readLine()) {
             if(line.trim().equals("")) {
@@ -314,6 +326,8 @@ public class VoldemortClientShell {
                     processGet(line.substring("get".length()));
                 } else if(line.toLowerCase().startsWith("delete")) {
                     processDelete(line.substring("delete".length()));
+                } else if(line.toLowerCase().startsWith("touch")) {
+                    processTouch(line.substring("touch".length()));
                 } else if(line.toLowerCase().startsWith("getmetadata")) {
                     String[] args = line.substring("getmetadata".length() + 1).split("\\s+");
                     int remoteNodeId = Integer.valueOf(args[0]);
