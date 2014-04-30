@@ -1,4 +1,4 @@
-# Voldemort is a distributed key-value storage system #
+# Voldemort: a distributed key-value storage system #
 
 ## Overview ##
 
