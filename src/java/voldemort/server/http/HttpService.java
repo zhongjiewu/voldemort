@@ -131,6 +131,7 @@ public class HttpService extends AbstractService {
         }
         this.httpServer = null;
         this.context = null;
+        logger.info("HTTP service stopped from port " + this.port);
     }
 
     @JmxGetter(name = "numberOfThreads", description = "The number of threads used for the thread pool for HTTP.")
