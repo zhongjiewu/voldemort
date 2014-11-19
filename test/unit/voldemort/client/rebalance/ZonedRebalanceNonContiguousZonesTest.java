@@ -370,6 +370,7 @@ public class ZonedRebalanceNonContiguousZonesTest extends AbstractRebalanceTest 
     @Test(timeout = 600000)
     public void testRWRebalance() throws Exception {
         logger.info("Starting testRWRebalance");
+        List<Integer> serverList = null;
         try {
             int zoneIds[] = new int[] { 1, 3 };
             int nodesPerZone[][] = new int[][] { { 3, 4 }, { 9, 10 } };
@@ -382,22 +383,22 @@ public class ZonedRebalanceNonContiguousZonesTest extends AbstractRebalanceTest 
             Cluster finalCluster = UpdateClusterUtils.createUpdatedCluster(currentCluster, 10, Lists.newArrayList(2, 6));
             finalCluster = UpdateClusterUtils.createUpdatedCluster(finalCluster, 4, Lists.newArrayList(3, 7));
             // start all the servers
-            List<Integer> serverList = Arrays.asList(3, 4, 9, 10);
+            serverList = Arrays.asList(3, 4, 9, 10);
             Map<String, String> configProps = new HashMap<String, String>();
             configProps.put("admin.max.threads", "5");
             currentCluster = startServers(currentCluster, storeDefFileWithoutReplication, serverList, configProps);
             String bootstrapUrl = getBootstrapUrl(currentCluster, 3);
             ClusterTestUtils.RebalanceKit rebalanceKit = ClusterTestUtils.getRebalanceKit(bootstrapUrl, finalCluster);
-            try {
-                populateData(currentCluster, rwStoreDefWithoutReplication);
-                rebalanceAndCheck(rebalanceKit.plan, rebalanceKit.controller, Arrays.asList(4, 9));
-                checkConsistentMetadata(finalCluster, serverList);
-            } finally {
-                stopServer(serverList);
-            }
+            populateData(currentCluster, rwStoreDefWithoutReplication);
+            rebalanceAndCheck(rebalanceKit.plan, rebalanceKit.controller, Arrays.asList(4, 9));
+            checkConsistentMetadata(finalCluster, serverList);
         } catch(AssertionError ae) {
             logger.error("Assertion broken in testRWRebalance ", ae);
             throw ae;
+        } finally {
+            if(serverList != null) {
+                stopServer(serverList);
+            }
         }
     }
 

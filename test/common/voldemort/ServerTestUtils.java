@@ -1020,8 +1020,7 @@ public class ServerTestUtils {
             server.start();
         } catch(VoldemortException ve) {
             if(ve.getCause() instanceof BindException) {
-                ve.printStackTrace();
-                throw new BindException(ve.getMessage());
+                throw (BindException)ve.getCause();
             } else {
                 throw ve;
             }
